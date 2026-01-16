@@ -14,3 +14,7 @@ backend/.env.*
 # OS
 .DS_Store
 .DS_Store
+dist
+*.bak
+*.bak.*
+*.log
