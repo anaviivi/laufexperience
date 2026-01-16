@@ -18,3 +18,7 @@ dist
 *.bak
 *.bak.*
 *.log
+dist
+*.bak
+*.bak.*
+*.log
