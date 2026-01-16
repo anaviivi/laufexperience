@@ -1,0 +1,263 @@
+import express from "express";
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+
+const router = express.Router();
+
+/* =========================
+   LAYOUT CONFIG
+========================= */
+
+const PAGE = {
+  size: "A4",
+  marginX: 64,
+  marginTop: 40,
+  marginBottom: 56,
+  maxWidth: 620,
+};
+
+const HEADER = {
+  height: 96,
+  bg: "#1e3a8a", // 🔵 NUR DER HEADER IST BLAU
+  text: "#ffffff",
+  sub: "rgba(255,255,255,.75)",
+};
+
+const CARD = {
+  radius: 14,
+  padding: 22,
+  gap: 18,
+};
+
+/* =========================
+   ROUTE
+========================= */
+
+router.post("/chat", async (req, res) => {
+  try {
+    const { title, messages, meta } = req.body;
+
+    if (!Array.isArray(messages) || !messages.length) {
+      return res.status(400).json({ error: "messages missing" });
+    }
+
+    const data = {
+      title: title || "LaufX Coach – Training",
+      exportLabel: meta?.exportLabel || "Karten-Export",
+      app: meta?.app || "laufXperience – KI Coach",
+      date: meta?.createdAt || new Date().toLocaleString("de-DE"),
+      section: meta?.overviewTitle || "Dein Plan im Überblick",
+      logo: findLogo(),
+    };
+
+    /* ---------- RESPONSE ---------- */
+
+    const filename = sanitize(data.title);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${filename}.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}.pdf`
+    );
+
+    const doc = new PDFDocument({
+      size: PAGE.size,
+      margins: {
+        top: PAGE.marginTop,
+        bottom: PAGE.marginBottom,
+        left: PAGE.marginX,
+        right: PAGE.marginX,
+      },
+      bufferPages: true,
+    });
+
+    doc.pipe(res);
+
+    doc.on("pageAdded", () => {
+      drawBackground(doc);
+      drawHeader(doc, data);
+      doc.y = PAGE.marginTop + HEADER.height + 32;
+    });
+
+    drawBackground(doc);
+    drawHeader(doc, data);
+    doc.y = PAGE.marginTop + HEADER.height + 32;
+
+    drawSection(doc, data.section);
+
+    messages.forEach((m) => drawCard(doc, normalize(m.content)));
+
+    drawPageNumbers(doc);
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "PDF generation failed" });
+  }
+});
+
+export default router;
+
+/* =========================
+   DRAWING
+========================= */
+
+function drawBackground(doc) {
+  doc.rect(0, 0, doc.page.width, doc.page.height).fill("#ffffff");
+}
+
+function contentBox(doc) {
+  const available = doc.page.width - PAGE.marginX * 2;
+  const width = Math.min(PAGE.maxWidth, available);
+  const x = PAGE.marginX + (available - width) / 2;
+  return { x, width };
+}
+
+/* ---------- HEADER (BLUE ONLY HERE) ---------- */
+
+function drawHeader(doc, data) {
+  const { x, width } = contentBox(doc);
+  const y = PAGE.marginTop;
+
+  // Blue header bar
+  doc
+    .rect(0, 0, doc.page.width, HEADER.height)
+    .fill(HEADER.bg);
+
+  // Logo
+  if (data.logo) {
+    doc.image(data.logo, x, y + 18, { width: 32, height: 32 });
+  }
+
+  // Left
+  doc.font("Helvetica-Bold").fontSize(24).fillColor(HEADER.text);
+  doc.text(data.title, x + 46, y + 14, { width: width * 0.6 });
+
+  doc.font("Helvetica").fontSize(12).fillColor(HEADER.sub);
+  doc.text(data.exportLabel, x + 46, y + 44);
+
+  // Right
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(HEADER.text);
+  doc.text(data.app, x, y + 18, { width, align: "right" });
+
+  doc.font("Helvetica").fontSize(11).fillColor(HEADER.sub);
+  doc.text(data.date, x, y + 38, { width, align: "right" });
+}
+
+/* ---------- SECTION ---------- */
+
+function drawSection(doc, title) {
+  const { x, width } = contentBox(doc);
+
+  doc.font("Helvetica-Bold").fontSize(22).fillColor("#0f172a");
+  doc.text(title, x, doc.y);
+
+  doc
+    .moveTo(x, doc.y + 12)
+    .lineTo(x + width, doc.y + 12)
+    .strokeColor("#e5e7eb")
+    .lineWidth(1)
+    .stroke();
+
+  doc.moveDown(1.6);
+}
+
+/* ---------- CARD ---------- */
+
+function drawCard(doc, text) {
+  const { x, width } = contentBox(doc);
+  const innerW = width - CARD.padding * 2;
+
+  doc.font("Helvetica").fontSize(12);
+  const lines = wrapText(doc, text, innerW);
+  const lineHeight = 18;
+  const height = lines.length * lineHeight + 64;
+
+  if (doc.y + height > doc.page.height - PAGE.marginBottom) {
+    doc.addPage();
+  }
+
+  const y = doc.y;
+
+  // Soft shadow
+  roundedRect(doc, x, y + 3, width, height, CARD.radius, "#000", 0.04);
+  roundedRect(doc, x, y + 1, width, height, CARD.radius, "#000", 0.08);
+
+  // Card
+  roundedRect(doc, x, y, width, height, CARD.radius, "#ffffff", 1, "#e5e7eb");
+
+  // Badge (neutral, NOT blue)
+  roundedRect(doc, x + CARD.padding, y + 16, 80, 24, 999, "#111827");
+  doc.font("Helvetica-Bold").fontSize(13).fillColor("#ffffff");
+  doc.text("COACH", x + CARD.padding + 16, y + 21);
+
+  // Text
+  let ty = y + 56;
+  doc.font("Helvetica").fontSize(12).fillColor("#0f172a");
+
+  lines.forEach((l) => {
+    doc.text(l, x + CARD.padding, ty, { width: innerW });
+    ty += lineHeight;
+  });
+
+  doc.y = y + height + CARD.gap;
+}
+
+/* =========================
+   HELPERS
+========================= */
+
+function roundedRect(doc, x, y, w, h, r, fill, opacity = 1, stroke) {
+  doc.save();
+  doc.opacity(opacity);
+  doc.fillColor(fill);
+  if (stroke) doc.strokeColor(stroke);
+  doc.roundedRect(x, y, w, h, r).fillAndStroke();
+  doc.restore();
+}
+
+function wrapText(doc, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let line = "";
+
+  words.forEach((w) => {
+    const test = line ? `${line} ${w}` : w;
+    if (doc.widthOfString(test) <= maxWidth) line = test;
+    else {
+      lines.push(line);
+      line = w;
+    }
+  });
+
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawPageNumbers(doc) {
+  const range = doc.bufferedPageRange();
+  for (let i = 0; i < range.count; i++) {
+    doc.switchToPage(range.start + i);
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#6b7280")
+      .text(`Seite ${i + 1} / ${range.count}`, PAGE.marginX, doc.page.height - 36, {
+        width: doc.page.width - PAGE.marginX * 2,
+        align: "right",
+      });
+  }
+}
+
+function sanitize(str) {
+  return str.replace(/[^\w\d]+/g, "-").toLowerCase();
+}
+
+function normalize(str) {
+  return String(str || "").replace(/\r/g, "").trim();
+}
+
+function findLogo() {
+  const p = path.resolve(process.cwd(), "assets", "logo.png");
+  return fs.existsSync(p) ? p : null;
+}

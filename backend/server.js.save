@@ -1,0 +1,12 @@
+import express from "express";
+
+const app = express();
+
+/**
+ * NUR PDF Export:
+ *
+ * (du kannst den Namen /history beibehalten, damit dein Frontend nichts ändern muss)
+ */
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`✅ PDF Export läuft auf http://localhost:${PORT}`));

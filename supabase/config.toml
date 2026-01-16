@@ -1,0 +1,2 @@
+[functions.strava-oauth]
+verify_jwt = false

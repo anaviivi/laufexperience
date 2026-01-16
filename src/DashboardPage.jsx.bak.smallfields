@@ -1,0 +1,1064 @@
+// src/DashboardPage.jsx
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useLanguage } from "./LanguageContext.jsx";
+import { supabase } from "./supabaseClient";
+
+const PROFILE_STORAGE_KEY = "laufx_profile";
+const COACH_KEY = "laufx_coach_profile";
+
+const texts = {
+  de: {
+    pageTitle: "Dein Dashboard",
+    subtitle:
+      "Hier siehst du auf einen Blick deine Ziele, deinen Wochenumfang und deinen Fortschritt – basierend auf echten Daten (manuell + Strava).",
+    hello: (name) => `Hi ${name || "Runner"}, willkommen zurück!`,
+
+    weekBlockTitle: "Aktuelle Woche",
+    kmTargetLabel: "Ziel-Umfang",
+    kmDoneLabel: "Erledigt",
+    progressLabel: "Fortschritt",
+    goalDistanceLabel: "Ziel-Distanz",
+    unitKm: "km",
+    runsLabel: "Läufe",
+
+    sourcesTitle: "Datenquellen",
+    stravaTitle: "Strava Sync",
+    stravaConnected: "Verbunden",
+    stravaNotConnected: "Nicht verbunden",
+    openConnections: "Verknüpfungen öffnen",
+    syncHint:
+      "Sobald Strava verbunden ist und Aktivitäten importiert werden, zählen sie automatisch in deine Wochenwerte.",
+    breakdownTitle: "Aufschlüsselung",
+    fromManual: "manuell",
+    fromStrava: "Strava",
+
+    manualEntryTitle: "Run eintragen",
+    distanceLabel: "Distanz (km)",
+    durationLabel: "Dauer (min, optional)",
+    dateLabel: "Datum",
+    saveRun: "Speichern",
+    saving: "Speichere…",
+    saved: "Gespeichert ✅",
+    mustLogin: "Bitte einloggen, um Runs zu speichern.",
+    invalidDistance: "Bitte eine Distanz > 0 eingeben.",
+    saveFailed: "Speichern fehlgeschlagen.",
+
+    dailyTitle: "Heute: Mini-Challenge",
+    nextStepsTitle: "Nächste Schritte",
+    nextStepsText:
+      "Mini-Challenge + 1 kleiner Lauf pro Woche – Konstanz schlägt Perfektion.",
+
+    modulesTitle: "Module",
+    module3dTitle: "3D Training",
+    module3dText: "Analysiere Haltung, Fußaufsatz und Kadenz in 3D.",
+    moduleAiTitle: "KI-Coaching",
+    moduleAiText: "Passe deinen Trainingsplan dynamisch an deine Belastung an.",
+    moduleQuizTitle: "Quiz / Lernmodul",
+    moduleQuizText:
+      "Teste dein Wissen zu Technik, Ernährung und Regeneration.",
+
+    buttonTo3d: "Zu 3D Training",
+    buttonToAi: "Zu KI-Coaching",
+    buttonToQuiz: "Quiz starten",
+
+    stravaBoxTitle: "Strava",
+    statusLabel: "Status",
+    connectStrava: "Mit Strava verbinden",
+    reconnectStrava: "Strava neu verbinden",
+    syncNow: "Jetzt synchronisieren",
+    syncing: "Sync läuft…",
+    loading: "Lädt…",
+    pleaseLoginStrava: "Bitte einloggen, um Strava zu verbinden.",
+    stravaConfigMissing:
+      "Strava-Konfiguration fehlt (VITE_SUPABASE_FUNCTIONS_BASE_URL / VITE_STRAVA_CLIENT_ID)",
+    stravaClientIdNumber: "Strava Client-ID muss eine Zahl sein.",
+    pleaseLogin: "Bitte einloggen.",
+    syncNotSetUp:
+      "Sync ist noch nicht eingerichtet (keine strava-sync Function) oder fehlgeschlagen.",
+    logHint: "Trage einen Lauf ein – er zählt sofort in dein Wochenziel.",
+    reset: "Zurücksetzen",
+    streak: "Streak",
+    consistency: "Konstanz",
+  },
+
+  en: {
+    pageTitle: "Your dashboard",
+    subtitle:
+      "Your goals, weekly volume and progress at a glance — based on real data (manual + Strava).",
+    hello: (name) => `Hi ${name || "Runner"}, welcome back!`,
+
+    weekBlockTitle: "Current week",
+    kmTargetLabel: "Weekly target",
+    kmDoneLabel: "Completed",
+    progressLabel: "Progress",
+    goalDistanceLabel: "Target distance",
+    unitKm: "km",
+    runsLabel: "Runs",
+
+    sourcesTitle: "Data sources",
+    stravaTitle: "Strava sync",
+    stravaConnected: "Connected",
+    stravaNotConnected: "Not connected",
+    openConnections: "Open connections",
+    syncHint:
+      "Once Strava is connected and activities are imported, they automatically count towards your weekly stats.",
+    breakdownTitle: "Breakdown",
+    fromManual: "manual",
+    fromStrava: "Strava",
+
+    manualEntryTitle: "Log a run",
+    distanceLabel: "Distance (km)",
+    durationLabel: "Duration (min, optional)",
+    dateLabel: "Date",
+    saveRun: "Save",
+    saving: "Saving…",
+    saved: "Saved ✅",
+    mustLogin: "Please sign in to save runs.",
+    invalidDistance: "Please enter a distance > 0.",
+    saveFailed: "Save failed.",
+
+    dailyTitle: "Today: mini challenge",
+    nextStepsTitle: "Next steps",
+    nextStepsText:
+      "Mini challenge + one short run per week — consistency beats perfection.",
+
+    modulesTitle: "Modules",
+    module3dTitle: "3D training",
+    module3dText: "Analyze posture, foot strike and cadence in 3D.",
+    moduleAiTitle: "AI coaching",
+    moduleAiText: "Let your training plan adapt dynamically to your current load.",
+    moduleQuizTitle: "Quiz / learning",
+    moduleQuizText: "Test your knowledge on technique, nutrition and recovery.",
+
+    buttonTo3d: "Go to 3D training",
+    buttonToAi: "Go to AI coaching",
+    buttonToQuiz: "Start quiz",
+
+    stravaBoxTitle: "Strava",
+    statusLabel: "Status",
+    connectStrava: "Connect Strava",
+    reconnectStrava: "Reconnect Strava",
+    syncNow: "Sync now",
+    syncing: "Syncing…",
+    loading: "Loading…",
+    pleaseLoginStrava: "Please sign in to connect Strava.",
+    stravaConfigMissing:
+      "Missing Strava config (VITE_SUPABASE_FUNCTIONS_BASE_URL / VITE_STRAVA_CLIENT_ID)",
+    stravaClientIdNumber: "Strava client id must be a number.",
+    pleaseLogin: "Please sign in.",
+    syncNotSetUp: "Sync is not set up yet (no strava-sync function) or failed.",
+    logHint: "Log a run — it immediately counts toward your weekly goal.",
+    reset: "Reset",
+    streak: "Streak",
+    consistency: "Consistency",
+  },
+};
+
+const styles = {
+  page: {
+    maxWidth: "1180px",
+    margin: "0 auto",
+    padding: "32px 24px 80px",
+    fontFamily:
+      'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  header: { marginBottom: 26 },
+  titleRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: 16,
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
+  title: { fontSize: 26, fontWeight: 700 },
+  subtitle: { fontSize: 14, color: "#4b5563", lineHeight: 1.6 },
+  hello: { fontSize: 14, color: "#6b7280" },
+  layout: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 7fr) minmax(0, 4fr)",
+    gap: 20,
+    alignItems: "flex-start",
+  },
+  card: {
+    background: "#ffffff",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 10px 25px rgba(15,23,42,0.06)",
+  },
+  cardTitle: { fontSize: 16, fontWeight: 600, marginBottom: 6 },
+  smallText: { fontSize: 13, color: "#6b7280", lineHeight: 1.55 },
+
+  statsRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 14,
+    marginTop: 12,
+  },
+  statBox: { background: "#6d95bcff", borderRadius: 14, padding: 10 },
+  statLabel: { fontSize: 12, color: "#e5e7eb" },
+  statValue: { marginTop: 2, fontSize: 16, fontWeight: 600, color: "#ffffff" },
+
+  progressOuter: {
+    marginTop: 14,
+    width: "100%",
+    height: 10,
+    borderRadius: 999,
+    background: "#e5e7eb",
+    overflow: "hidden",
+  },
+  progressInner: (percent) => ({
+    width: `${percent}%`,
+    height: "100%",
+    background: "linear-gradient(90deg,#0b1e32,#10b981)",
+    transition: "width 0.25s ease",
+  }),
+
+  modulesGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 16,
+    marginTop: 16,
+  },
+  moduleCard: {
+    background: "#ffffffff",
+    borderRadius: 16,
+    padding: 14,
+    boxShadow: "0 10px 20px rgba(15,23,42,0.04)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  moduleTitle: { fontSize: 15, fontWeight: 600 },
+  moduleText: { fontSize: 13, color: "#4b5563", flexGrow: 1, lineHeight: 1.55 },
+  moduleBtn: {
+    marginTop: 4,
+    padding: "7px 12px",
+    borderRadius: 999,
+    border: "1px solid #0b1e32",
+    background: "#ffffff",
+    color: "#0b1e32",
+    fontSize: 13,
+    cursor: "pointer",
+    alignSelf: "flex-start",
+    fontWeight: 700,
+  },
+
+  pillRow: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 },
+  pill: (tone) => ({
+    padding: "4px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 700,
+    border: "1px solid #e5e7eb",
+    background:
+      tone === "good"
+        ? "rgba(16,185,129,0.14)"
+        : tone === "warn"
+        ? "rgba(245,158,11,0.14)"
+        : "#f3f4f6",
+    color:
+      tone === "good"
+        ? "#065f46"
+        : tone === "warn"
+        ? "#92400e"
+        : "#111827",
+  }),
+
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 12,
+    marginTop: 12,
+  },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    fontSize: 13,
+    outline: "none",
+  },
+  label: { fontSize: 12, color: "#4b5563", marginBottom: 6, fontWeight: 600 },
+  btnPrimary: {
+    marginTop: 10,
+    padding: "10px 12px",
+    borderRadius: 999,
+    border: "1px solid #0b1e32",
+    background: "#0b1e32",
+    color: "#ffffff",
+    fontSize: 13,
+    cursor: "pointer",
+    fontWeight: 800,
+  },
+  btnGhost: {
+    marginTop: 10,
+    padding: "10px 12px",
+    borderRadius: 999,
+    border: "1px solid #0b1e32",
+    background: "#ffffff",
+    color: "#0b1e32",
+    fontSize: 13,
+    cursor: "pointer",
+    fontWeight: 800,
+  },
+
+  callout: {
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 12,
+    border: "1px solid rgba(15,23,42,0.08)",
+    background: "rgba(16,185,129,0.10)",
+  },
+  calloutTitle: { fontSize: 13, fontWeight: 800, color: "#0b1e32" },
+  calloutText: { marginTop: 6, fontSize: 13, color: "#0f172a", lineHeight: 1.6 },
+};
+
+function safeJsonParse(raw, fallback) {
+  try {
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// Week boundaries computed in local time, returned as ISO strings (UTC) to query timestamps safely.
+function startOfWeekISO(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0..6 (Sun..Sat)
+  const diff = day === 0 ? -6 : 1 - day; // Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+function endOfWeekISO(date = new Date()) {
+  const d = new Date(startOfWeekISO(date));
+  d.setDate(d.getDate() + 7);
+  return d.toISOString();
+}
+function dateKeyLocal(dt) {
+  const x = new Date(dt);
+  x.setHours(0, 0, 0, 0);
+  return x.toISOString().slice(0, 10);
+}
+function computeStreak(daysWithRunSet) {
+  let s = 0;
+  const cur = new Date();
+  cur.setHours(0, 0, 0, 0);
+  while (true) {
+    const key = cur.toISOString().slice(0, 10);
+    if (daysWithRunSet.has(key)) {
+      s += 1;
+      cur.setDate(cur.getDate() - 1);
+    } else break;
+  }
+  return s;
+}
+
+function pickDailyChallenge({ language, goalType, level, injuries }) {
+  const seed = Math.floor(Date.now() / 86400000);
+  const pick = (arr) => arr[seed % arr.length];
+
+  const cautious = String(injuries || "")
+    .toLowerCase()
+    .match(/knie|achill|schien|shin|rücken|back/);
+
+  const pool = {
+    beginner: [
+      {
+        de: {
+          title: "Kadenz-Drill (5 min)",
+          text: "5× 45s leichter, schneller Schritt + 30s locker. Fokus: kurz & leise.",
+        },
+        en: {
+          title: "Cadence drill (5 min)",
+          text: "5× 45s light quick steps + 30s easy. Focus: short & quiet.",
+        },
+      },
+      {
+        de: {
+          title: "Mobility Reset (8 min)",
+          text: "Hüfte + Waden: 2 Runden, locker atmen. Danach 2 min gehen.",
+        },
+        en: {
+          title: "Mobility reset (8 min)",
+          text: "Hips + calves: 2 rounds, easy breathing. Then 2 min walk.",
+        },
+      },
+    ],
+    intermediate: [
+      {
+        de: {
+          title: "Strides (6–8 min)",
+          text: "6× 15–20s locker flott, dazwischen 60–90s gehen/joggen.",
+        },
+        en: {
+          title: "Strides (6–8 min)",
+          text: "6× 15–20s relaxed fast, 60–90s walk/jog between.",
+        },
+      },
+      {
+        de: {
+          title: "Core-Stabi (10 min)",
+          text: "Plank + Glute Bridge: 2–3 Runden. Qualität > Quantität.",
+        },
+        en: {
+          title: "Core stability (10 min)",
+          text: "Plank + glute bridge: 2–3 rounds. Quality > quantity.",
+        },
+      },
+    ],
+    advanced: [
+      {
+        de: {
+          title: "Tempo-Touch (8–12 min)",
+          text: "3× 2 min zügig (nicht all-out) mit 2 min locker.",
+        },
+        en: {
+          title: "Tempo touch (8–12 min)",
+          text: "3× 2 min steady (not all-out) with 2 min easy.",
+        },
+      },
+      {
+        de: {
+          title: "Berg-Form (10 min)",
+          text: "6× 20s bergauf sauber. Fokus: kurzer Schritt, stabiler Oberkörper.",
+        },
+        en: {
+          title: "Hill form (10 min)",
+          text: "6× 20s uphill. Focus: short steps, stable posture.",
+        },
+      },
+    ],
+  };
+
+  if (cautious) {
+    return language === "de"
+      ? {
+          title: "Schon-Challenge (8 min)",
+          text: "8 min Mobility + 2 min entspannt gehen. Heute zählt: schmerzfrei bleiben.",
+        }
+      : {
+          title: "Gentle challenge (8 min)",
+          text: "8 min mobility + 2 min easy walk. Today: stay pain-free.",
+        };
+  }
+
+  const lvl = pool[level] ? level : "beginner";
+  const chosen = pick(pool[lvl]);
+  const localized = chosen[language] || chosen.de;
+
+  const add =
+    goalType === "mara"
+      ? language === "de"
+        ? " Bonus: 5 min easy extra, wenn du frisch bist."
+        : " Bonus: add 5 min easy if you feel fresh."
+      : goalType === "5k"
+      ? language === "de"
+        ? " Bonus: achte auf schnellen Armschwung."
+        : " Bonus: focus on quick arm swing."
+      : "";
+
+  return { title: localized.title, text: localized.text + add };
+}
+
+export default function DashboardPage() {
+  const { language } = useLanguage();
+  const t = texts[language] || texts.de;
+
+  // --- Strava OAuth ---
+  const FUNCTIONS_BASE_URL =
+    import.meta.env.VITE_SUPABASE_FUNCTIONS_BASE_URL ??
+    "https://fjiuvfypkvsjybyfxaoe.functions.supabase.co";
+  const STRAVA_CLIENT_ID = import.meta.env.VITE_STRAVA_CLIENT_ID ?? "";
+
+  const [profile, setProfile] = useState(() => ({
+    name: "Runner",
+    goalType: "10k",
+    weeklyKm: "25",
+    unit: "km",
+    ...(safeJsonParse(localStorage.getItem(PROFILE_STORAGE_KEY), {}) || {}),
+  }));
+  const [coach, setCoach] = useState(() => ({
+    level: "beginner",
+    runsPerWeek: "3",
+    injuries: "",
+    ...(safeJsonParse(localStorage.getItem(COACH_KEY), {}) || {}),
+  }));
+
+  const [sessionUser, setSessionUser] = useState(null);
+
+  // DB stats
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [weeklyDoneKm, setWeeklyDoneKm] = useState(0);
+  const [weeklyRunsDone, setWeeklyRunsDone] = useState(0);
+  const [streakDays, setStreakDays] = useState(0);
+  const [consistencyPercent, setConsistencyPercent] = useState(0);
+  const [manualKm, setManualKm] = useState(0);
+  const [stravaKm, setStravaKm] = useState(0);
+
+  // Strava connection status
+  const [loadingConn, setLoadingConn] = useState(false);
+  const [stravaConnected, setStravaConnected] = useState(false);
+
+  // Manual Strava sync state
+  const [syncState, setSyncState] = useState({ status: "idle", msg: "" });
+
+  const startStravaOAuth = async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data?.session;
+
+    if (!session?.user) {
+      alert(t.pleaseLoginStrava);
+      return;
+    }
+
+    const clientId = String(STRAVA_CLIENT_ID ?? "").trim();
+    const functionsBase = String(FUNCTIONS_BASE_URL ?? "").replace(/\/+$/g, "");
+
+    if (!functionsBase || !clientId) {
+      alert(t.stravaConfigMissing);
+      return;
+    }
+    if (!/^\d+$/.test(clientId)) {
+      alert(t.stravaClientIdNumber);
+      return;
+    }
+
+    const url = new URL("https://www.strava.com/oauth/authorize");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("redirect_uri", `${functionsBase}/strava-oauth`);
+    url.searchParams.set("state", session.user.id);
+    url.searchParams.set("scope", "activity:read_all");
+    url.searchParams.set("approval_prompt", "auto");
+
+    window.location.href = url.toString();
+  };
+
+  // Manual entry form
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [runDate, setRunDate] = useState(todayISO);
+  const [distanceKm, setDistanceKm] = useState("");
+  const [durationMin, setDurationMin] = useState("");
+  const [saveState, setSaveState] = useState({ status: "idle", msg: "" });
+
+  // Session watcher
+  useEffect(() => {
+    let alive = true;
+
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
+      setSessionUser(data?.session?.user ?? null);
+    };
+
+    init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSessionUser(sess?.user ?? null);
+    });
+
+    return () => {
+      alive = false;
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, []);
+
+  // Load Strava connection status
+  useEffect(() => {
+    let alive = true;
+
+    async function loadConnections() {
+      if (!sessionUser) {
+        setStravaConnected(false);
+        return;
+      }
+
+      setLoadingConn(true);
+
+      const { data, error } = await supabase
+        .from("device_connections")
+        .select("id, provider")
+        .eq("user_id", sessionUser.id)
+        .order("created_at", { ascending: false });
+
+      if (!alive) return;
+
+      if (error) {
+        console.error("device_connections error:", error);
+        setStravaConnected(false);
+        setLoadingConn(false);
+        return;
+      }
+
+      const has = (data || []).some((c) =>
+        ["strava", "other"].includes(String(c?.provider || "").toLowerCase())
+      );
+
+      setStravaConnected(has);
+      setLoadingConn(false);
+    }
+
+    loadConnections();
+
+    return () => {
+      alive = false;
+    };
+  }, [sessionUser]);
+
+  // Load weekly stats from runs (manual + strava)
+  const loadRunStats = useCallback(async () => {
+    if (!sessionUser) {
+      setWeeklyDoneKm(0);
+      setWeeklyRunsDone(0);
+      setStreakDays(0);
+      setConsistencyPercent(0);
+      setManualKm(0);
+      setStravaKm(0);
+      return;
+    }
+
+    setLoadingStats(true);
+
+    const wStart = startOfWeekISO(new Date());
+    const wEnd = endOfWeekISO(new Date());
+
+    const { data: weeklyRows, error: weeklyErr } = await supabase
+      .from("runs")
+      .select("started_at, distance_km, source")
+      .eq("user_id", sessionUser.id)
+      .gte("started_at", wStart)
+      .lt("started_at", wEnd);
+
+    if (weeklyErr) console.error("runs weekly error:", weeklyErr);
+
+    const d7 = new Date();
+    d7.setDate(d7.getDate() - 6);
+    d7.setHours(0, 0, 0, 0);
+    const d7ISO = d7.toISOString();
+
+    const { data: last7Rows, error: last7Err } = await supabase
+      .from("runs")
+      .select("started_at")
+      .eq("user_id", sessionUser.id)
+      .gte("started_at", d7ISO);
+
+    if (last7Err) console.error("runs last7 error:", last7Err);
+
+    const wk = Array.isArray(weeklyRows) ? weeklyRows : [];
+    const weeklyKm = wk.reduce((s, r) => s + Number(r?.distance_km || 0), 0);
+
+    const mKm = wk
+      .filter((r) => (r?.source || "manual") === "manual")
+      .reduce((s, r) => s + Number(r?.distance_km || 0), 0);
+
+    const sKm = wk
+      .filter((r) => (r?.source || "") === "strava")
+      .reduce((s, r) => s + Number(r?.distance_km || 0), 0);
+
+    setWeeklyDoneKm(Math.round(weeklyKm * 10) / 10);
+    setWeeklyRunsDone(wk.length);
+    setManualKm(Math.round(mKm * 10) / 10);
+    setStravaKm(Math.round(sKm * 10) / 10);
+
+    const last7 = Array.isArray(last7Rows) ? last7Rows : [];
+    const daysWithRun = new Set(last7.map((r) => dateKeyLocal(r.started_at)));
+    const activeDays = daysWithRun.size;
+
+    setConsistencyPercent(Math.round((activeDays / 7) * 100));
+    setStreakDays(computeStreak(daysWithRun));
+
+    setLoadingStats(false);
+  }, [sessionUser]);
+
+  useEffect(() => {
+    loadRunStats();
+  }, [loadRunStats]);
+
+  const runStravaSync = async () => {
+    if (!sessionUser) {
+      setSyncState({ status: "error", msg: t.pleaseLogin });
+      return;
+    }
+
+    setSyncState({ status: "loading", msg: "" });
+
+    try {
+      const { error } = await supabase.functions.invoke("strava-sync");
+      if (error) throw error;
+
+      setSyncState({ status: "ok", msg: language === "de" ? "Sync abgeschlossen ✅" : "Sync complete ✅" });
+      await loadRunStats();
+    } catch (e) {
+      console.error("strava-sync error:", e);
+      setSyncState({ status: "error", msg: t.syncNotSetUp });
+    }
+  };
+
+  // Derived
+  const weeklyTarget = Number(profile.weeklyKm) || 0;
+  const progressPercent =
+    weeklyTarget > 0 ? Math.min(100, (weeklyDoneKm / weeklyTarget) * 100) : 0;
+
+  const goalDistanceLabelMap =
+    language === "de"
+      ? { "5k": "5 km", "10k": "10 km", hm: "Halbmarathon", mara: "Marathon" }
+      : { "5k": "5 km", "10k": "10 km", hm: "Half marathon", mara: "Marathon" };
+
+  const goalDistanceLabel =
+    goalDistanceLabelMap[profile.goalType] || goalDistanceLabelMap["10k"];
+
+  const daily = useMemo(
+    () =>
+      pickDailyChallenge({
+        language,
+        goalType: profile.goalType,
+        level: coach.level,
+        injuries: coach.injuries,
+      }),
+    [language, profile.goalType, coach.level, coach.injuries]
+  );
+
+  // Manual save
+  const saveManualRun = async () => {
+    setSaveState({ status: "idle", msg: "" });
+
+    if (!sessionUser) {
+      setSaveState({ status: "error", msg: t.mustLogin });
+      return;
+    }
+
+    const km = Number(String(distanceKm).replace(",", "."));
+    if (!Number.isFinite(km) || km <= 0) {
+      setSaveState({ status: "error", msg: t.invalidDistance });
+      return;
+    }
+
+    const durMin = Number(String(durationMin).replace(",", "."));
+    const durationSec =
+      Number.isFinite(durMin) && durMin > 0 ? Math.round(durMin * 60) : null;
+
+    // Midday UTC helps avoid timezone shift when you only store date
+    const startedAt = new Date(`${runDate}T12:00:00.000Z`).toISOString();
+
+    setSaveState({ status: "saving", msg: "" });
+
+    const { error } = await supabase.from("runs").insert({
+      user_id: sessionUser.id,
+      started_at: startedAt,
+      distance_km: km,
+      duration_sec: durationSec,
+      source: "manual",
+    });
+
+    if (error) {
+      console.error("insert run error:", error);
+      setSaveState({ status: "error", msg: t.saveFailed });
+      return;
+    }
+
+    setDistanceKm("");
+    setDurationMin("");
+    setSaveState({ status: "ok", msg: t.saved });
+
+    await loadRunStats();
+  };
+
+  return (
+    <div style={styles.page}>
+      <header style={styles.header}>
+        <div style={styles.titleRow}>
+          <h1 style={styles.title}>{t.pageTitle}</h1>
+          <span style={styles.hello}>{t.hello(profile.name)}</span>
+        </div>
+        <p style={styles.subtitle}>{t.subtitle}</p>
+      </header>
+
+      <div style={styles.layout}>
+        <section>
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>{t.weekBlockTitle}</h2>
+            <p style={styles.smallText}>
+              {t.goalDistanceLabel}: {goalDistanceLabel}
+              {loadingStats ? ` · ${t.loading}` : ""}
+            </p>
+
+            <div style={styles.statsRow}>
+              <div style={styles.statBox}>
+                <div style={styles.statLabel}>{t.kmTargetLabel}</div>
+                <div style={styles.statValue}>
+                  {weeklyTarget} {t.unitKm}
+                </div>
+              </div>
+
+              <div style={styles.statBox}>
+                <div style={styles.statLabel}>{t.kmDoneLabel}</div>
+                <div style={styles.statValue}>
+                  {weeklyDoneKm} {t.unitKm}
+                </div>
+                <div style={{ fontSize: 12, color: "#e5e7eb", marginTop: 4 }}>
+                  {weeklyRunsDone} {t.runsLabel}
+                </div>
+              </div>
+
+              <div style={styles.statBox}>
+                <div style={styles.statLabel}>{t.progressLabel}</div>
+                <div style={styles.statValue}>{Math.round(progressPercent)}%</div>
+              </div>
+            </div>
+
+            <div style={styles.progressOuter}>
+              <div style={styles.progressInner(progressPercent)} />
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <div style={styles.cardTitle}>{t.breakdownTitle}</div>
+              <p style={styles.smallText}>
+                {manualKm} {t.unitKm} {t.fromManual} · {stravaKm} {t.unitKm}{" "}
+                {t.fromStrava}
+              </p>
+
+              <div style={styles.pillRow}>
+                <span style={styles.pill(streakDays >= 3 ? "good" : "neutral")}>
+                  {t.streak}: {streakDays}
+                </span>
+                <span style={styles.pill(consistencyPercent >= 70 ? "good" : "warn")}>
+                  {t.consistency}: {consistencyPercent}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ ...styles.card, marginTop: 18 }}>
+            <h2 style={styles.cardTitle}>{t.manualEntryTitle}</h2>
+            <p style={styles.smallText}>{t.logHint}</p>
+
+            <div style={styles.formGrid}>
+              <div>
+                <div style={styles.label}>{t.dateLabel}</div>
+                <input
+                  style={styles.input}
+                  type="date"
+                  value={runDate}
+                  onChange={(e) => setRunDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <div style={styles.label}>{t.distanceLabel}</div>
+                <input
+                  style={styles.input}
+                  inputMode="decimal"
+                  placeholder="z.B. 5.2"
+                  value={distanceKm}
+                  onChange={(e) => setDistanceKm(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <div style={styles.label}>{t.durationLabel}</div>
+                <input
+                  style={styles.input}
+                  inputMode="decimal"
+                  placeholder="z.B. 32"
+                  value={durationMin}
+                  onChange={(e) => setDurationMin(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                style={{
+                  ...styles.btnPrimary,
+                  opacity: saveState.status === "saving" ? 0.7 : 1,
+                }}
+                disabled={saveState.status === "saving"}
+                onClick={saveManualRun}
+              >
+                {saveState.status === "saving" ? t.saving : t.saveRun}
+              </button>
+
+              <button
+                style={styles.btnGhost}
+                onClick={() => {
+                  setDistanceKm("");
+                  setDurationMin("");
+                  setSaveState({ status: "idle", msg: "" });
+                }}
+              >
+                {t.reset}
+              </button>
+            </div>
+
+            {saveState.msg ? (
+              <p
+                style={{
+                  marginTop: 10,
+                  fontSize: 13,
+                  color: saveState.status === "error" ? "#b91c1c" : "#065f46",
+                  fontWeight: 700,
+                }}
+              >
+                {saveState.msg}
+              </p>
+            ) : null}
+          </div>
+
+          <div style={{ ...styles.card, marginTop: 18 }}>
+            <h2 style={styles.cardTitle}>{t.modulesTitle}</h2>
+            <div style={styles.modulesGrid}>
+              <div style={styles.moduleCard}>
+                <div style={styles.moduleTitle}>{t.module3dTitle}</div>
+                <div style={styles.moduleText}>{t.module3dText}</div>
+                <button
+                  style={styles.moduleBtn}
+                  onClick={() => (window.location.href = "/3d-training")}
+                >
+                  {t.buttonTo3d}
+                </button>
+              </div>
+
+              <div style={styles.moduleCard}>
+                <div style={styles.moduleTitle}>{t.moduleAiTitle}</div>
+                <div style={styles.moduleText}>{t.moduleAiText}</div>
+                <button
+                  style={styles.moduleBtn}
+                  onClick={() => (window.location.href = "/ki-coaching")}
+                >
+                  {t.buttonToAi}
+                </button>
+              </div>
+
+              <div style={styles.moduleCard}>
+                <div style={styles.moduleTitle}>{t.moduleQuizTitle}</div>
+                <div style={styles.moduleText}>{t.moduleQuizText}</div>
+                <button
+                  style={styles.moduleBtn}
+                  onClick={() => (window.location.href = "/quiz")}
+                >
+                  {t.buttonToQuiz}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside style={styles.card}>
+          <div
+            style={{
+              marginTop: 0,
+              padding: 14,
+              borderRadius: 16,
+              border: "1px solid #e5e7eb",
+              background: "#ffffff",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+              {t.stravaBoxTitle}
+            </div>
+
+            <div style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.5 }}>
+              {t.statusLabel}:{" "}
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  border: "1px solid #e5e7eb",
+                  background: stravaConnected ? "#ecfdf5" : "#fff7ed",
+                  color: stravaConnected ? "#065f46" : "#9a3412",
+                  marginLeft: 6,
+                }}
+              >
+                {stravaConnected ? t.stravaConnected : t.stravaNotConnected}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              <button
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid #0b1e32",
+                  background: "#0b1e32",
+                  color: "#ffffff",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+                onClick={startStravaOAuth}
+              >
+                {stravaConnected ? t.reconnectStrava : t.connectStrava}
+              </button>
+
+              <button
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  border: "1px solid #0b1e32",
+                  background: "#ffffff",
+                  color: "#0b1e32",
+                  fontSize: 13,
+                  cursor: syncState.status === "loading" ? "not-allowed" : "pointer",
+                  opacity: syncState.status === "loading" ? 0.6 : 1,
+                }}
+                onClick={runStravaSync}
+                disabled={syncState.status === "loading"}
+              >
+                {syncState.status === "loading" ? t.syncing : t.syncNow}
+              </button>
+            </div>
+
+            {syncState.msg ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: syncState.status === "error" ? "#b91c1c" : "#065f46",
+                }}
+              >
+                {syncState.msg}
+              </div>
+            ) : null}
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <div style={styles.cardTitle}>{t.sourcesTitle}</div>
+            <p style={styles.smallText}>{t.syncHint}</p>
+
+            <div style={styles.pillRow}>
+              <span style={styles.pill(stravaConnected ? "good" : "warn")}>
+                {t.stravaTitle}:{" "}
+                {loadingConn ? t.loading : stravaConnected ? t.stravaConnected : t.stravaNotConnected}
+              </span>
+            </div>
+
+            <button
+              style={styles.btnGhost}
+              onClick={() => {
+                window.location.href = "/device-connections";
+              }}
+            >
+              {t.openConnections}
+            </button>
+          </div>
+
+          <div style={styles.callout}>
+            <div style={styles.calloutTitle}>{t.dailyTitle}</div>
+            <div style={styles.calloutText}>
+              <strong>{daily.title}</strong>
+              <div style={{ marginTop: 6 }}>{daily.text}</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div style={styles.cardTitle}>{t.nextStepsTitle}</div>
+            <p style={styles.smallText}>{t.nextStepsText}</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

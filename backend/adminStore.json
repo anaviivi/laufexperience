@@ -1,0 +1,27 @@
+{
+  "roles": [
+    { "id": "admin",  "name": "Admin",  "description": "Vollzugriff" },
+    { "id": "editor", "name": "Editor", "description": "Inhalte verwalten" },
+    { "id": "user",   "name": "User",   "description": "Normaler User" },
+    { "id": "viewer", "name": "Viewer", "description": "Nur ansehen" }
+  ],
+  "permissionGroups": [
+    { "title": "Articles", "perms": [
+      { "key": "articles.view", "label": "Artikel ansehen" },
+      { "key": "articles.manage", "label": "Artikel verwalten" }
+    ]},
+    { "title": "Users", "perms": [
+      { "key": "users.view", "label": "User ansehen" },
+      { "key": "users.manage", "label": "User verwalten" }
+    ]},
+    { "title": "Admin", "perms": [
+      { "key": "permissions.manage", "label": "Rechte/Rollen verwalten" }
+    ]}
+  ],
+  "matrix": {
+    "admin":  ["articles.view","articles.manage","users.view","users.manage","permissions.manage"],
+    "editor": ["articles.view","articles.manage"],
+    "user":   ["articles.view"],
+    "viewer": ["articles.view"]
+  }
+}
