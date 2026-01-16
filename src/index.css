@@ -5,55 +5,42 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-}
 
 /* kannst du spÃ¤ter erweitern */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-}
 /* === FORCE TEXT + BUTTON VISIBILITY (VITE) === */
 
-}
 
 /* FALLBACK: falls Variablen nicht verwendet werden */
 body{
   color: ;
-}
 
 .dark{
-}
 
 /* === DARK MODE: FORCE READABLE TEXT (LAST RESORT) === */
   color: rgba(255,255,255,.92);
-}
   color: inherit;
-}
   color: rgba(255,255,255,.65);
-}
 
 /* CTA / Buttons: text always white in dark */
-  color: #fff;
-}
 
 /* === BUTTON TEXT RULES (SAFE) === */
 
 /* Default: normaler Text */
 :where(button,a,.btn,.pill){
   color: ;
-}
 
 /* Primary/Filled -> weißer Text */
 :where(button,a,.btn,.pill).primary,
 :where(button,a,.btn,.pill).filled,
 :where(button,a,.btn,.pill)[data-variant="primary"]{
   color: ;
-}
 :where(button,a,.btn,.pill).primary *,
 :where(button,a,.btn,.pill).filled *,
 :where(button,a,.btn,.pill)[data-variant="primary"] *{
   color: ;
-}
 
 /* Secondary/Light/Ghost -> dunkler Text */
 :where(button,a,.btn,.pill).light,
@@ -61,13 +48,11 @@ body{
 :where(button,a,.btn,.pill)[data-variant="secondary"],
 :where(button,a,.btn,.pill)[data-variant="ghost"]{
   color: ;
-}
 :where(button,a,.btn,.pill).light *,
 :where(button,a,.btn,.pill).white *,
 :where(button,a,.btn,.pill)[data-variant="secondary"] *,
 :where(button,a,.btn,.pill)[data-variant="ghost"] *{
   color: ;
-}
 
 /* ===================================================
    HERO CTA HOVER (SUBTLE & CLEAN)
@@ -77,22 +62,17 @@ body{
 .hero :where(button,.pill,.btn).primary:hover,
 .hero :where(button,.pill,.btn)[data-variant="primary"]:hover{
   background: linear-gradient(135deg, #1e293b, #0f172a);
-  box-shadow: 0 8px 22px rgba(15,23,42,0.35);
   transform: translateY(-1px);
-}
 
 /* SECONDARY – Demo ansehen (weniger Glow) */
 .hero :where(button,.pill,.btn).light,
 .hero :where(button,.pill,.btn)[data-variant="secondary"]{
   color: ;
-}
 
 .hero :where(button,.pill,.btn).light:hover,
 .hero :where(button,.pill,.btn)[data-variant="secondary"]:hover{
-  box-shadow: 0 6px 16px rgba(255,255,255,0.25);
   background: #ffffff;
   transform: translateY(-1px);
-}
 
 /* Smooth transition */
 .hero :where(button,.pill,.btn){
@@ -100,50 +80,38 @@ body{
     box-shadow .25s ease,
     transform .2s ease,
     background .25s ease;
-}
 
 /* Fallback: erstes & zweites CTA im Hero */
 .hero .cta-group > :first-child:hover{
-  box-shadow: 0 8px 22px rgba(15,23,42,0.35);
   transform: translateY(-1px);
-}
 
 .hero .cta-group > :nth-child(2):hover{
-  box-shadow: 0 6px 16px rgba(255,255,255,0.25);
   transform: translateY(-1px);
-}
 
 /* ===================================================
    DARK MODE READABILITY BOOST (GLOBAL)
    =================================================== */
   /* stärkere Lesbarkeit für sekundären Text */
-}
 
 /* Standardtext wirklich hell machen */
   color: ;
-}
 
 /* Typografie: alles, was oft zu transparent ist */
   color: inherit;
-}
 
 /* “Muted”-Klassen / typische secondary Texte (greift in vielen Komponenten) */
   color: ;
-}
 
 /* Cards: Text nicht absaufen lassen */
   color: ;
-}
 
 /* Badges/Pills wie "Noch nicht gespielt" lesbar machen */
   background: rgba(255,255,255,.10);
   border-color: rgba(255,255,255,.18);
   color: rgba(255,255,255,.88);
-}
 
 /* Wenn Text per opacity zu schwach ist */
   opacity: 1;
-}
 
 /* ===================================================
    FORCE WHITE TEXT ON DARK BUTTONS (FINAL)
@@ -155,8 +123,6 @@ body{
 :where(button,a,.btn,.pill)[data-variant="primary"],
 :where(button,a,.btn,.pill)[aria-label],
 :where(button,a,.btn,.pill)[class*="dark"]{
-  color: #ffffff;
-}
 
 /* ALLES im Button ebenfalls weiß (Span, Icon, etc.) */
 :where(button,a,.btn,.pill).primary *,
@@ -164,8 +130,6 @@ body{
 :where(button,a,.btn,.pill)[data-variant="primary"] *,
 :where(button,a,.btn,.pill)[aria-label] *,
 :where(button,a,.btn,.pill)[class*="dark"] *{
-  color: #ffffff;
-}
 
 /* ===================================================
    BUTTON SYSTEM (LIGHT + DARK) – FINAL
@@ -176,55 +140,40 @@ body{
 
   color: ;
   border-color: ;
-}
 
 /* Ensure inner spans/icons follow */
 :where(button,a,.btn,.pill) *{
   color: inherit;
-}
 
 /* PRIMARY / FILLED (dark background -> white text) */
 :where(button,a,.btn,.pill).primary,
 :where(button,a,.btn,.pill).filled,
 :where(button,a,.btn,.pill)[data-variant="primary"]{
-}
 
 /* SECONDARY / LIGHT (light background -> dark text) */
 :where(button,a,.btn,.pill).light,
 :where(button,a,.btn,.pill).white,
 :where(button,a,.btn,.pill)[data-variant="secondary"],
 :where(button,a,.btn,.pill)[data-variant="ghost"]{
-}
 
 /* DARK MODE: secondary stays readable (still dark text on light surface) */
-}
 
 /* HOVER (both buttons get hover, but subtle) */
 :where(button,a,.btn,.pill):hover{
   filter: brightness(1.06);
   transform: translateY(-0.5px);
   transition: filter .15s ease, transform .15s ease, box-shadow .15s ease;
-}
 
 /* Glow reduzieren: nur sehr weich und nur bei secondary (falls vorher zu stark) */
 :where(button,a,.btn,.pill).white,
 :where(button,a,.btn,.pill)[data-variant="secondary"]{
-  box-shadow: 0 8px 22px rgba(15,23,42,.10);
-}
-  box-shadow: 0 10px 26px rgba(0,0,0,.25);
-}
 
 
 /* ===================================================
    HEADER: FORCE WHITE TEXT IN DARK MODE
    =================================================== */
-  color: #ffffff;
-}
 
 /* Navigation-Links, Logo, Icons */
-  color: #ffffff;
-  fill: #ffffff;
-}
 
 /* ===================================================
    HEADER – FORCE WHITE TEXT (WINS AGAINST INLINE)
@@ -232,27 +181,16 @@ body{
 
 /* header immer weiß – egal ob light oder dark */
 header, header *{
-  color: #ffffff;
-}
 
 /* Links/Icons zusätzlich */
 header a, header a *{
-  color: #ffffff;
-}
 header svg{
-  fill: #ffffff;
-}
 
 /* Header only (safe, no dropdown side effects) */
 header{
-  color: #fff;
-}
 header a{
   color: rgba(255,255,255,.88);
-}
 header a[aria-current="page"]{
-  color: #fff;
-}
 
 /* ===================================================
    PROFILE MENU FIX (READABILITY)
@@ -260,31 +198,19 @@ header a[aria-current="page"]{
 
 /* LIGHT MODE: dunkler Text auf weißem Menü */
 [data-ui="profile-menu"]{
-  color: #0f172a;
-}
 [data-ui="profile-menu"] :where(div,span,a,button,label,small){
-  color: #0f172a;
-}
 
 /* Sekundärtexte (leicht gedimmt, aber lesbar) */
 [data-ui="profile-menu"] :where(.muted,.subtle,.meta,.caption){
   color: rgba(15,23,42,.65);
-}
 
 /* DARK MODE: heller Text auf dunklem Menü */
-  color: #e5e7eb;
-}
-  color: #e5e7eb;
-}
   color: rgba(229,231,235,.72);
-}
 
 /* Menü-Links/Rows: Hover sichtbar */
 [data-ui="profile-menu"] [role="menuitem"]:hover{
   background: rgba(15,23,42,.06);
-}
   background: rgba(255,255,255,.06);
-}
 
 /* ===================================================
    PROFILE MENU – HARD FIX (COLOR + OPACITY)
@@ -292,28 +218,20 @@ header a[aria-current="page"]{
 
 [data-ui="profile-menu"]{
   background: #ffffff;
-}
 
 /* Alles im Menü: volle Deckkraft + dunkle Schrift */
 [data-ui="profile-menu"] :where(*){
   opacity: 1;
-  color: #0f172a;
   text-shadow: none;
-}
 
 /* Dark Mode Variante */
   background: #0b1220;
-}
   opacity: 1;
-  color: #e5e7eb;
-}
 
 /* Cards/Rows im Menü etwas absetzen */
 [data-ui="profile-menu"] :where([role="menuitem"], a, button){
   border-color: rgba(15,23,42,.12);
-}
   border-color: rgba(255,255,255,.14);
-}
 
 /* FINAL OVERRIDE: primary buttons always white */
 button.btn.primary{ color:#fff; }
@@ -322,7 +240,16 @@ button.btn.primary *{ color: inherit; }
 /* FINAL OVERRIDE: hero demo button (light) must be dark text */
 .hero a[href="/demo"] button{
   color: ;
-}
 .hero a[href="/demo"] button *{
   color: inherit;
+
+/* ===================================================
+   HEADER – FORCE WHITE TEXT
+   =================================================== */
+header, header * {
+  color: #ffffff;
+}
+
+header svg, header svg * {
+  fill: #ffffff;
 }
